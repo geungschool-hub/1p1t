@@ -721,7 +721,80 @@ html, body {
 .toolbar-btn.import-json { background: #f5f0ff; color: #7c4dca; border: 1px solid #d0bff5; }
 .toolbar-btn.edit-mode   { background: #fff8ec; color: #b45309; border: 1px solid #fcd49a; }
 .toolbar-btn.edit-mode.active { background: #b45309; color: white; border-color: #b45309; }
+.toolbar-btn.view-log    { background: #eef0ff; color: #4a4fc8; border: 1px solid #c5c8f0; }
+.toolbar-btn.manage-pw   { background: #fdf0ff; color: #8b2fc8; border: 1px solid #ddbff5; }
 .toolbar-btn:active { opacity: 0.8; }
+
+/* ── 변경 로그 모달 ── */
+.log-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  margin-bottom: 8px;
+  border-left: 3px solid var(--primary);
+}
+.log-item.log-delete { border-left-color: var(--danger); opacity: 0.65; }
+.log-item-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+.log-time  { font-size: 11px; color: var(--text-sub); flex-shrink: 0; }
+.log-name  { font-size: 13px; font-weight: 700; color: var(--text); }
+.log-day   { font-size: 12px; color: var(--text-sub); margin-left: auto; flex-shrink: 0; }
+.log-preview { font-size: 12px; color: var(--text-sub); line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+.log-actor-teacher {
+  font-size: 10px; background: #264653; color: white;
+  padding: 1px 6px; border-radius: 999px; flex-shrink: 0;
+}
+.log-ip {
+  font-size: 10px; color: var(--text-sub); font-family: monospace;
+  background: #f3f4f6; padding: 1px 5px; border-radius: 4px; flex-shrink: 0;
+}
+.log-empty { text-align: center; padding: 28px 0; color: var(--text-sub); font-size: 13px; }
+
+/* ── 학생 비밀번호 모달 ── */
+.spw-student-name {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.spw-subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+/* ── 담임 비밀번호 관리 ── */
+.pw-reset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pw-reset-item:last-child { border-bottom: none; }
+.pw-reset-info { display: flex; align-items: center; gap: 8px; }
+.pw-reset-num  { font-size: 13px; font-weight: 700; color: var(--text-sub); min-width: 26px; }
+.pw-reset-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.pw-reset-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+}
+.pw-reset-badge.set   { background: #e8f5f3; color: var(--primary); }
+.pw-reset-badge.unset { background: #f3f4f6; color: var(--text-sub); }
+.pw-reset-btn {
+  background: #fff0ee; color: var(--danger);
+  border: 1px solid #fcd9d3; border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  padding: 6px 14px; cursor: pointer; min-height: 36px; flex-shrink: 0;
+}
+.pw-reset-btn:active { background: var(--danger); color: white; }
 
 /* ── 최근 입장 빠른버튼 ── */
 .recent-section { margin-top: 4px; }
@@ -945,6 +1018,8 @@ html, body {
       <button class="toolbar-btn export-json" id="btn-export-json">📦 JSON 백업</button>
       <button class="toolbar-btn import-json" id="btn-import-json">📂 JSON 불러오기</button>
       <button class="toolbar-btn edit-mode"   id="btn-edit-mode">✏️ 편집 모드</button>
+      <button class="toolbar-btn view-log"   id="btn-view-log">📋 변경 로그</button>
+      <button class="toolbar-btn manage-pw"  id="btn-manage-pw">🔑 비밀번호 관리</button>
       <input type="file" id="t-import-file" accept=".json" style="display:none">
     </div>
   </div>
@@ -973,6 +1048,61 @@ html, body {
       <button class="modal-close" id="history-modal-close">✕</button>
     </div>
     <div class="modal-body" id="history-modal-body"></div>
+  </div>
+</div>
+
+<!-- 학생 비밀번호 모달 -->
+<div class="modal-overlay" id="student-pw-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="spw-title">비밀번호 입력</div>
+      <button class="modal-close" id="spw-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="spw-student-name" id="spw-student-name"></div>
+      <div class="spw-subtitle" id="spw-subtitle"></div>
+      <div class="pw-display" id="spw-display">　</div>
+      <div class="pw-keypad">
+        <button class="pw-key" onclick="spwInput('1')">1</button>
+        <button class="pw-key" onclick="spwInput('2')">2</button>
+        <button class="pw-key" onclick="spwInput('3')">3</button>
+        <button class="pw-key" onclick="spwInput('4')">4</button>
+        <button class="pw-key" onclick="spwInput('5')">5</button>
+        <button class="pw-key" onclick="spwInput('6')">6</button>
+        <button class="pw-key" onclick="spwInput('7')">7</button>
+        <button class="pw-key" onclick="spwInput('8')">8</button>
+        <button class="pw-key" onclick="spwInput('9')">9</button>
+        <button class="pw-key" onclick="spwDelete()">⌫</button>
+        <button class="pw-key" onclick="spwInput('0')">0</button>
+        <button class="pw-key" style="visibility:hidden"></button>
+      </div>
+      <div class="pw-error" id="spw-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 담임 비밀번호 관리 모달 -->
+<div class="modal-overlay" id="pw-reset-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">🔑 비밀번호 관리</div>
+      <button class="modal-close" id="pw-reset-close">✕</button>
+    </div>
+    <div class="modal-body" id="pw-reset-body"></div>
+  </div>
+</div>
+
+<!-- 변경 로그 모달 -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">📋 변경 로그</div>
+      <button class="modal-close" id="log-modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="log-modal-body"></div>
   </div>
 </div>
 
@@ -1078,6 +1208,18 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ── 비밀번호 캐시 (실시간 로드) ──
+let passwordsCache = {};
+let passwordsLoaded = false;
+db.ref('passwords').on('value', (snap) => {
+  passwordsCache = snap.val() || {};
+  passwordsLoaded = true;
+  // 담임 비밀번호 관리 모달이 열려있으면 즉시 갱신
+  if (document.getElementById('pw-reset-modal')?.classList.contains('show')) {
+    renderPwResetList();
+  }
+});
+
 // ── Firebase 경로 유틸 ──
 function weekKey(year, week) {
   return `${year}_W${String(week).padStart(2,'0')}`;
@@ -1112,8 +1254,39 @@ function getCached(dayKey) {
 
 async function setRecord(studentId, year, week, dayKey, value) {
   await db.ref(dbPath(studentId, year, week, dayKey)).set(value || null);
+  logChange(studentId, weekKey(year, week), dayKey, value, 'student'); // fire-and-forget
   if (value) weekCache[dayKey] = value;
   else delete weekCache[dayKey];
+}
+
+// 클라이언트 IP 캐시 (세션 내 1회 조회)
+let clientIP = null;
+
+async function fetchClientIP() {
+  if (clientIP !== null) return clientIP;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    clientIP = data.ip || '';
+  } catch {
+    clientIP = '';
+  }
+  return clientIP;
+}
+
+// 변경 로그 기록 (실패해도 무시)
+async function logChange(studentId, wk, dayKey, value, actor) {
+  const ip = await fetchClientIP();
+  db.ref('logs').push({
+    studentId, wk, dayKey,
+    value: value || '',
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
+    actor: actor || 'student',
+    ip: ip || ''
+  }).catch(() => {});
 }
 
 // ══════════════════════════════════════
@@ -1593,10 +1766,235 @@ document.getElementById('teacher-back-btn').addEventListener('click', () => {
     db.ref('roles').off('value');
     teacherUnsubscribe = null;
   }
+  closeLogModal();
   isEditMode = false;
   document.getElementById('btn-edit-mode').classList.remove('active');
   showScreen('screen-entry');
 });
+
+// ══════════════════════════════════════
+//  학생 비밀번호 모달
+// ══════════════════════════════════════
+let spwMode = 'enter';   // 'enter' | 'set-first' | 'set-confirm'
+let spwBuffer = '';
+let spwFirstPw = '';
+let spwStudent = null;
+
+function openStudentPwModal(mode, student) {
+  spwStudent = student;
+  spwBuffer = '';
+  spwFirstPw = '';
+  spwMode = mode === 'set' ? 'set-first' : 'enter';
+  updateSpwUI();
+  document.getElementById('spw-error').textContent = '';
+  document.getElementById('student-pw-modal').classList.add('show');
+}
+
+function updateSpwUI() {
+  document.getElementById('spw-display').textContent = '　';
+  document.getElementById('spw-student-name').textContent =
+    `${spwStudent.num}번 ${spwStudent.name}`;
+  const subtitle = document.getElementById('spw-subtitle');
+  const title = document.getElementById('spw-title');
+  if (spwMode === 'enter') {
+    title.textContent = '🔒 비밀번호 입력';
+    subtitle.textContent = '비밀번호 4자리를 입력해주세요.';
+  } else if (spwMode === 'set-first') {
+    title.textContent = '🔑 비밀번호 설정';
+    subtitle.textContent = '처음 입장이에요.\n사용할 비밀번호 4자리를 설정하세요.';
+  } else {
+    title.textContent = '🔑 비밀번호 확인';
+    subtitle.textContent = '한 번 더 입력해주세요.';
+  }
+}
+
+function spwInput(d) {
+  if (spwBuffer.length >= 4) return;
+  spwBuffer += d;
+  document.getElementById('spw-display').textContent = '●'.repeat(spwBuffer.length);
+  if (spwBuffer.length === 4) setTimeout(spwConfirm, 180);
+}
+
+function spwDelete() {
+  spwBuffer = spwBuffer.slice(0, -1);
+  const disp = document.getElementById('spw-display');
+  disp.textContent = spwBuffer.length ? '●'.repeat(spwBuffer.length) : '　';
+}
+
+async function spwConfirm() {
+  if (spwBuffer.length < 4) return;
+  const errEl = document.getElementById('spw-error');
+
+  if (spwMode === 'enter') {
+    if (spwBuffer === passwordsCache[spwStudent.id]) {
+      document.getElementById('student-pw-modal').classList.remove('show');
+      proceedAsStudent(spwStudent);
+    } else {
+      errEl.textContent = '비밀번호가 틀렸습니다.';
+      spwBuffer = '';
+      document.getElementById('spw-display').textContent = '　';
+    }
+
+  } else if (spwMode === 'set-first') {
+    spwFirstPw = spwBuffer;
+    spwBuffer = '';
+    spwMode = 'set-confirm';
+    updateSpwUI();
+    errEl.textContent = '';
+
+  } else { // set-confirm
+    if (spwBuffer === spwFirstPw) {
+      try {
+        await db.ref(`passwords/${spwStudent.id}`).set(spwFirstPw);
+        document.getElementById('student-pw-modal').classList.remove('show');
+        showToast('비밀번호가 설정됐어요 🔑');
+        proceedAsStudent(spwStudent);
+      } catch {
+        errEl.textContent = '저장 실패. 다시 시도해주세요.';
+        spwBuffer = '';
+        document.getElementById('spw-display').textContent = '　';
+      }
+    } else {
+      spwBuffer = '';
+      spwFirstPw = '';
+      spwMode = 'set-first';
+      updateSpwUI();
+      document.getElementById('spw-error').textContent = '비밀번호가 일치하지 않아요. 처음부터 다시 입력하세요.';
+    }
+  }
+}
+
+document.getElementById('spw-close').addEventListener('click', () => {
+  document.getElementById('student-pw-modal').classList.remove('show');
+});
+
+// ══════════════════════════════════════
+//  담임 비밀번호 관리
+// ══════════════════════════════════════
+document.getElementById('btn-manage-pw').addEventListener('click', () => {
+  renderPwResetList();
+  document.getElementById('pw-reset-modal').classList.add('show');
+});
+document.getElementById('pw-reset-close').addEventListener('click', () => {
+  document.getElementById('pw-reset-modal').classList.remove('show');
+});
+
+function renderPwResetList() {
+  const body = document.getElementById('pw-reset-body');
+  body.innerHTML = STUDENTS.map(s => {
+    const hasPw = !!passwordsCache[s.id];
+    return `<div class="pw-reset-item">
+      <div class="pw-reset-info">
+        <span class="pw-reset-num">${s.num}</span>
+        <span class="pw-reset-name">${s.name}</span>
+        <span class="pw-reset-badge ${hasPw ? 'set' : 'unset'}">${hasPw ? '설정됨' : '미설정'}</span>
+      </div>
+      ${hasPw ? `<button class="pw-reset-btn" onclick="resetStudentPw('${s.id}')">초기화</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function resetStudentPw(studentId) {
+  const student = STUDENTS.find(s => s.id === studentId);
+  if (!confirm(`${student?.name}의 비밀번호를 초기화할까요?\n다음 입장 시 새로 설정하게 됩니다.`)) return;
+  try {
+    await db.ref(`passwords/${studentId}`).remove();
+    showToast(`${student?.name} 비밀번호 초기화 완료 ✔`);
+  } catch {
+    showToast('초기화 실패 ❌');
+  }
+}
+
+// ══════════════════════════════════════
+//  변경 로그 모달
+// ══════════════════════════════════════
+let logListener = null;
+
+document.getElementById('btn-view-log').addEventListener('click', openLogModal);
+document.getElementById('log-modal-close').addEventListener('click', closeLogModal);
+document.getElementById('log-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeLogModal();
+});
+
+function openLogModal() {
+  document.getElementById('log-modal').classList.add('show');
+  const body = document.getElementById('log-modal-body');
+  body.innerHTML = '<div class="log-empty">불러오는 중...</div>';
+
+  if (logListener) db.ref('logs').off('value', logListener);
+
+  logListener = db.ref('logs').limitToLast(100).on('value', (snap) => {
+    const data = snap.val();
+    if (!data) {
+      body.innerHTML = '<div class="log-empty">아직 변경 기록이 없습니다.</div>';
+      return;
+    }
+    const entries = Object.entries(data)
+      .map(([k, v]) => ({ key: k, ...v }))
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    body.innerHTML = entries.map(entry => {
+      const student = STUDENTS.find(s => s.id === entry.studentId);
+      if (!student) return '';
+      const ts = entry.timestamp ? new Date(entry.timestamp) : null;
+      const timeStr = ts ? formatLogTime(ts) : '';
+      const dayIdx = DAYS_KEY.indexOf(entry.dayKey);
+      const dayLabel = dayIdx >= 0 ? DAYS_KO[dayIdx] : entry.dayKey;
+      const dateStr = getDateFromWkDay(entry.wk, entry.dayKey);
+      const isDelete = !entry.value;
+      const preview = isDelete
+        ? '(내용 삭제됨)'
+        : entry.value.replace(/\n/g, ' ').slice(0, 50) + (entry.value.length > 50 ? '…' : '');
+      const actorBadge = entry.actor === 'teacher'
+        ? '<span class="log-actor-teacher">담임</span>' : '';
+      const ipBadge = entry.ip ? `<span class="log-ip">${entry.ip}</span>` : '';
+      return `<div class="log-item${isDelete ? ' log-delete' : ''}">
+        <div class="log-item-header">
+          <span class="log-time">${timeStr}</span>
+          <span class="log-name">${student.num} ${student.name}</span>
+          ${actorBadge}
+          <span class="log-day">${dateStr}(${dayLabel})</span>
+        </div>
+        ${ipBadge}
+        <div class="log-preview">${preview}</div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function closeLogModal() {
+  document.getElementById('log-modal').classList.remove('show');
+  if (logListener) {
+    db.ref('logs').off('value', logListener);
+    logListener = null;
+  }
+}
+
+function formatLogTime(date) {
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const h = date.getHours();
+  const m = String(date.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? '오전' : '오후';
+  const h12 = h % 12 || 12;
+  if (isToday) return `오늘 ${ampm} ${h12}:${m}`;
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return `어제 ${ampm} ${h12}:${m}`;
+  return `${date.getMonth()+1}/${date.getDate()} ${ampm} ${h12}:${m}`;
+}
+
+function getDateFromWkDay(wk, dayKey) {
+  if (!wk) return '';
+  try {
+    const [yr, wn] = wk.split('_');
+    const week = parseInt(wn.replace('W', ''));
+    const monday = getMondayOfWeek(parseInt(yr), week);
+    const dayIdx = DAYS_KEY.indexOf(dayKey);
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + Math.max(dayIdx, 0));
+    return formatDate(d) + ' ';
+  } catch { return ''; }
+}
 
 // ══════════════════════════════════════
 //  내보내기 & 편집 모드
@@ -1677,7 +2075,9 @@ document.getElementById('btn-edit-mode').addEventListener('click', async () => {
     const writes = [];
     document.querySelectorAll('.edit-cell-textarea').forEach(ta => {
       const { sid, dk } = ta.dataset;
-      writes.push(db.ref(`roles/${sid}/${weekKey(info.year, info.week)}/${dk}`).set(ta.value || null));
+      const wk = weekKey(info.year, info.week);
+      writes.push(db.ref(`roles/${sid}/${wk}/${dk}`).set(ta.value || null));
+      logChange(sid, wk, dk, ta.value, 'teacher');
     });
     showLoading(true);
     try {
@@ -1785,10 +2185,21 @@ function quickEnter(studentId) {
 }
 
 function enterAsStudent(student) {
+  if (!passwordsLoaded) { showToast('잠시 후 다시 시도해주세요.'); return; }
+  const pw = passwordsCache[student.id];
+  if (!pw) {
+    openStudentPwModal('set', student);
+  } else {
+    openStudentPwModal('enter', student);
+  }
+}
+
+function proceedAsStudent(student) {
   addRecentEntry(student.id);
   currentStudent = student;
   weekOffset = 0;
   document.getElementById('entry-error').textContent = '';
+  fetchClientIP();
   openRecordScreen();
 }
 
