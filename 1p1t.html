@@ -6,6 +6,7 @@
 <title>1인 1역 수행 기록 · 2학년 7반</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <style>
 /* ── 리셋 & 기본 ── */
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -110,8 +111,11 @@ html, body {
 
 /* 담임 버튼 */
 .teacher-btn-wrap {
-  padding-top: 4px;
+  flex-shrink: 0;
+  padding: 8px 20px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border);
+  background: var(--card);
 }
 .teacher-btn {
   width: 100%;
@@ -518,13 +522,17 @@ html, body {
   text-align: center;
   margin-top: 10px;
   min-height: 20px;
+  white-space: pre-line;   /* \n 줄바꿈 표시 */
+  line-height: 1.45;
 }
 
 /* ════════════════════════
    담임 화면
 ════════════════════════ */
 #screen-teacher {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
 }
 .teacher-header {
   background: #264653;
@@ -584,7 +592,7 @@ html, body {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 480px;
+  table-layout: fixed;
 }
 .overview-table th {
   background: #f0faf8;
@@ -601,7 +609,7 @@ html, body {
 .overview-table th.col-name {
   text-align: left;
   padding-left: 12px;
-  min-width: 100px;
+  width: 88px;
   position: sticky;
   left: 0;
   z-index: 2;
@@ -628,7 +636,7 @@ html, body {
 .overview-table tr:hover td.col-name { background: var(--primary-light); }
 
 .td-name-main { font-weight: 600; font-size: 13px; }
-.td-name-role { font-size: 11px; color: var(--text-sub); margin-top: 1px; }
+.td-name-role { font-size: 11px; color: var(--text-sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 76px; }
 
 .td-check {
   display: flex;
@@ -696,18 +704,17 @@ html, body {
 /* ── 담임 하단 툴바 ── */
 .teacher-toolbar {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   padding: 10px 16px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: var(--card);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 .toolbar-btn {
   flex: 1;
-  min-width: calc(50% - 4px);
-  padding: 11px 8px;
+  min-width: calc(33% - 4px);
+  padding: 10px 6px;
   border-radius: var(--radius-sm);
   border: none;
   font-size: 13px;
@@ -922,10 +929,10 @@ html, body {
         <div class="recent-label">⚡ 최근 입장</div>
         <div class="recent-btns" id="recent-btns"></div>
       </div>
+    </div>
 
-      <div class="teacher-btn-wrap">
-        <button class="teacher-btn" id="teacher-btn">🔒 담임 선생님</button>
-      </div>
+    <div class="teacher-btn-wrap">
+      <button class="teacher-btn" id="teacher-btn">🔒 담임 선생님</button>
     </div>
   </div>
 
@@ -974,8 +981,6 @@ html, body {
     </div>
   </div>
 
-</div>
-
   <!-- ══════════════════════════
        화면 3: 담임 현황
   ══════════════════════════ -->
@@ -997,7 +1002,17 @@ html, body {
       <button class="week-nav-btn" id="t-btn-next-week">›</button>
     </div>
 
-    <div style="padding:8px 16px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:flex-end;">
+    <div class="teacher-toolbar">
+      <button class="toolbar-btn edit-mode"   id="btn-edit-mode">✏️ 편집 모드</button>
+      <button class="toolbar-btn manage-pw"  id="btn-manage-pw">🔑 비밀번호 관리</button>
+      <button class="toolbar-btn export-csv"  id="btn-export-csv">📄 CSV</button>
+      <button class="toolbar-btn export-json" id="btn-export-json">📦 백업</button>
+      <button class="toolbar-btn import-json" id="btn-import-json">📂 복원</button>
+      <button class="toolbar-btn view-log"   id="btn-view-log">📋 변경 로그</button>
+      <input type="file" id="t-import-file" accept=".json" style="display:none">
+    </div>
+
+    <div style="padding:6px 16px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:flex-end;">
       <span class="unrecorded-badge" id="unrecorded-badge"></span>
     </div>
 
@@ -1012,17 +1027,9 @@ html, body {
         <tbody id="overview-tbody"></tbody>
       </table>
     </div>
-
-    <div class="teacher-toolbar">
-      <button class="toolbar-btn export-csv"  id="btn-export-csv">📄 CSV 내보내기</button>
-      <button class="toolbar-btn export-json" id="btn-export-json">📦 JSON 백업</button>
-      <button class="toolbar-btn import-json" id="btn-import-json">📂 JSON 불러오기</button>
-      <button class="toolbar-btn edit-mode"   id="btn-edit-mode">✏️ 편집 모드</button>
-      <button class="toolbar-btn view-log"   id="btn-view-log">📋 변경 로그</button>
-      <button class="toolbar-btn manage-pw"  id="btn-manage-pw">🔑 비밀번호 관리</button>
-      <input type="file" id="t-import-file" accept=".json" style="display:none">
-    </div>
   </div>
+
+</div>
 
 <!-- 기록 상세 모달 -->
 <div class="modal-overlay" id="record-detail-modal">
@@ -1190,8 +1197,9 @@ const STUDENTS = [
   { id:'20726', num:'26', name:'한예소',  role:'피카츄 공주',    dept:'학습부', desc:'• 선택과목 수업 시 형광등·전자칠판·냉난방기 등 절전\n• 냉난방 온도 조절\n• 환기 시 난방 끄기' },
 ];
 
-const DAYS_KO  = ['월','화','수','목','금'];
-const DAYS_KEY = ['mon','tue','wed','thu','fri'];
+const DAYS_KO      = ['월','화','수','목','금'];
+const DAYS_KEY     = ['mon','tue','wed','thu','fri'];
+const TEACHER_EMAIL = 'teacher@c27.local'; // Firebase Auth 담임 계정 이메일
 
 // ══════════════════════════════════════
 //  Firebase 초기화
@@ -1206,19 +1214,57 @@ const firebaseConfig = {
   appId: "1:664269865774:web:b4dc3dc465002d3a5df0bf"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db   = firebase.database();
+const auth = firebase.auth();
+// Firebase Auth 상태는 IndexedDB에 자동 저장 (기본값 LOCAL)
 
-// ── 비밀번호 캐시 (실시간 로드) ──
-let passwordsCache = {};
-let passwordsLoaded = false;
-db.ref('passwords').on('value', (snap) => {
-  passwordsCache = snap.val() || {};
-  passwordsLoaded = true;
-  // 담임 비밀번호 관리 모달이 열려있으면 즉시 갱신
-  if (document.getElementById('pw-reset-modal')?.classList.contains('show')) {
-    renderPwResetList();
+// ── 로그인 에러 코드 → 사용자 안내 메시지 ──
+// (이전 버전은 모든 에러를 "비밀번호가 틀렸습니다"로 덮어써서,
+//  요청 과다 차단(too-many-requests)을 비밀번호 오류로 착각해 계속 재시도 → 차단 심화됐음)
+function authErrorMessage(e) {
+  switch (e?.code) {
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+    case 'auth/user-not-found':
+      return '비밀번호가 틀렸습니다.';
+    case 'auth/too-many-requests':
+      return '로그인 시도가 많아 잠시 잠겼어요.\n잠시 후 다시 하거나 선생님께 알려주세요.';
+    case 'auth/network-request-failed':
+      return '인터넷 연결이 불안정해요.\n잠시 후 다시 시도해주세요.';
+    case 'auth/user-disabled':
+      return '계정이 잠겼어요. 선생님께 문의하세요.';
+    default:
+      return '로그인에 실패했어요.' + (e?.code ? ' (' + e.code + ')' : '');
   }
-});
+}
+
+// ── 학생 PIN 과다 시도 방지 (auth/too-many-requests 사전 예방) ──
+// 연속 실패가 쌓이면 키패드를 잠시 잠가, 서버가 기기/IP를 차단하기 전에 멈추게 함
+let spwFailCount = 0;     // 연속 실패 횟수
+let spwLockUntil = 0;     // 이 시각(ms)까지 입력 잠금
+let spwLockTimer = null;
+
+function spwIsLocked() { return Date.now() < spwLockUntil; }
+
+function startSpwLock(seconds, baseMsg) {
+  spwLockUntil = Date.now() + seconds * 1000;
+  const errEl = document.getElementById('spw-error');
+  clearInterval(spwLockTimer);
+  const tick = () => {
+    const remain = Math.ceil((spwLockUntil - Date.now()) / 1000);
+    if (remain <= 0) {
+      clearInterval(spwLockTimer);
+      spwLockTimer = null;
+      spwFailCount = 0;
+      errEl.textContent = '이제 다시 입력할 수 있어요.';
+      return;
+    }
+    errEl.textContent = `${baseMsg}\n(${remain}초 후 다시 시도 가능)`;
+  };
+  tick();
+  spwLockTimer = setInterval(tick, 1000);
+}
 
 // ── Firebase 경로 유틸 ──
 function weekKey(year, week) {
@@ -1280,11 +1326,14 @@ async function fetchClientIP() {
 // 변경 로그 기록 (실패해도 무시)
 async function logChange(studentId, wk, dayKey, value, actor) {
   const ip = await fetchClientIP();
+  const user = auth.currentUser;
+  const actualActor = actor
+    || (user?.email === TEACHER_EMAIL ? 'teacher' : 'student');
   db.ref('logs').push({
     studentId, wk, dayKey,
     value: value || '',
     timestamp: firebase.database.ServerValue.TIMESTAMP,
-    actor: actor || 'student',
+    actor: actualActor,
     ip: ip || ''
   }).catch(() => {});
 }
@@ -1522,6 +1571,7 @@ document.getElementById('confirm-leave-ok').addEventListener('click', () => {
 });
 
 function goHome() {
+  auth.signOut().catch(() => {});
   unsaved = false;
   currentStudent = null;
   weekOffset = 0;
@@ -1553,9 +1603,8 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 });
 
 // ══════════════════════════════════════
-//  비밀번호 모달
+//  담임 로그인 모달
 // ══════════════════════════════════════
-const ADMIN_PW = '0000';
 let pwBuffer = '';
 
 document.getElementById('teacher-btn').addEventListener('click', () => {
@@ -1569,7 +1618,7 @@ document.getElementById('pw-close').addEventListener('click', () => {
 });
 
 function pwInput(d) {
-  if (pwBuffer.length >= 4) return;
+  if (pwBuffer.length >= 6) return;
   pwBuffer += d;
   document.getElementById('pw-display').textContent = '●'.repeat(pwBuffer.length);
 }
@@ -1577,14 +1626,21 @@ function pwDelete() {
   pwBuffer = pwBuffer.slice(0, -1);
   document.getElementById('pw-display').textContent = pwBuffer.length ? '●'.repeat(pwBuffer.length) : '　';
 }
-function pwConfirm() {
-  if (pwBuffer === ADMIN_PW) {
+async function pwConfirm() {
+  if (pwBuffer.length < 6) return;
+  const errEl = document.getElementById('pw-error');
+  errEl.textContent = '';
+  showLoading(true);
+  try {
+    await auth.signInWithEmailAndPassword(TEACHER_EMAIL, pwBuffer);
     document.getElementById('pw-modal').classList.remove('show');
     openTeacherScreen();
-  } else {
-    document.getElementById('pw-error').textContent = '비밀번호가 틀렸습니다.';
+  } catch(e) {
+    errEl.textContent = authErrorMessage(e);
     pwBuffer = '';
     document.getElementById('pw-display').textContent = '　';
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -1761,7 +1817,7 @@ document.getElementById('t-btn-next-week').addEventListener('click', () => {
 });
 
 document.getElementById('teacher-back-btn').addEventListener('click', () => {
-  // 실시간 구독 해제
+  auth.signOut().catch(() => {});
   if (teacherUnsubscribe) {
     db.ref('roles').off('value');
     teacherUnsubscribe = null;
@@ -1809,6 +1865,7 @@ function updateSpwUI() {
 }
 
 function spwInput(d) {
+  if (spwIsLocked()) return;
   if (spwBuffer.length >= 4) return;
   spwBuffer += d;
   document.getElementById('spw-display').textContent = '●'.repeat(spwBuffer.length);
@@ -1826,13 +1883,33 @@ async function spwConfirm() {
   const errEl = document.getElementById('spw-error');
 
   if (spwMode === 'enter') {
-    if (spwBuffer === passwordsCache[spwStudent.id]) {
+    if (spwIsLocked()) return;
+    // Firebase Auth 로그인
+    showLoading(true);
+    try {
+      await auth.signInWithEmailAndPassword(
+        studentEmail(spwStudent), spwBuffer + '#s27'
+      );
+      spwFailCount = 0;
       document.getElementById('student-pw-modal').classList.remove('show');
       proceedAsStudent(spwStudent);
-    } else {
-      errEl.textContent = '비밀번호가 틀렸습니다.';
+    } catch(e) {
       spwBuffer = '';
       document.getElementById('spw-display').textContent = '　';
+      if (e?.code === 'auth/too-many-requests') {
+        // 서버가 이미 차단 → 더 두드리지 않도록 90초 잠금
+        startSpwLock(90, '로그인 시도가 많아 잠시 잠겼어요.');
+      } else {
+        spwFailCount++;
+        if (spwFailCount >= 5) {
+          // 차단당하기 전에 선제적으로 60초 쉬게 함
+          startSpwLock(60, '여러 번 틀렸어요. 잠깐 쉬었다 다시 해요.');
+        } else {
+          errEl.textContent = authErrorMessage(e);
+        }
+      }
+    } finally {
+      showLoading(false);
     }
 
   } else if (spwMode === 'set-first') {
@@ -1844,15 +1921,29 @@ async function spwConfirm() {
 
   } else { // set-confirm
     if (spwBuffer === spwFirstPw) {
+      showLoading(true);
       try {
-        await db.ref(`passwords/${spwStudent.id}`).set(spwFirstPw);
+        // Firebase Auth 계정 생성
+        const cred = await auth.createUserWithEmailAndPassword(
+          studentEmail(spwStudent), spwBuffer + '#s27'
+        );
+        // UID를 DB에 저장 (write-once: 보안 규칙으로 보호)
+        await db.ref(`studentMeta/${spwStudent.id}/uid`).set(cred.user.uid);
         document.getElementById('student-pw-modal').classList.remove('show');
         showToast('비밀번호가 설정됐어요 🔑');
         proceedAsStudent(spwStudent);
-      } catch {
-        errEl.textContent = '저장 실패. 다시 시도해주세요.';
+      } catch(e) {
         spwBuffer = '';
         document.getElementById('spw-display').textContent = '　';
+        if (e?.code === 'auth/too-many-requests') {
+          startSpwLock(90, '시도가 많아 잠시 잠겼어요.');
+        } else if (e?.code === 'auth/network-request-failed') {
+          errEl.textContent = '인터넷 연결이 불안정해요.\n잠시 후 다시 시도해주세요.';
+        } else {
+          errEl.textContent = '저장 실패. 다시 시도해주세요.' + (e?.code ? '\n(' + e.code + ')' : '');
+        }
+      } finally {
+        showLoading(false);
       }
     } else {
       spwBuffer = '';
@@ -1871,35 +1962,50 @@ document.getElementById('spw-close').addEventListener('click', () => {
 // ══════════════════════════════════════
 //  담임 비밀번호 관리
 // ══════════════════════════════════════
-document.getElementById('btn-manage-pw').addEventListener('click', () => {
-  renderPwResetList();
+document.getElementById('btn-manage-pw').addEventListener('click', async () => {
   document.getElementById('pw-reset-modal').classList.add('show');
+  await renderPwResetList();
 });
 document.getElementById('pw-reset-close').addEventListener('click', () => {
   document.getElementById('pw-reset-modal').classList.remove('show');
 });
 
-function renderPwResetList() {
+async function renderPwResetList() {
   const body = document.getElementById('pw-reset-body');
-  body.innerHTML = STUDENTS.map(s => {
-    const hasPw = !!passwordsCache[s.id];
-    return `<div class="pw-reset-item">
-      <div class="pw-reset-info">
-        <span class="pw-reset-num">${s.num}</span>
-        <span class="pw-reset-name">${s.name}</span>
-        <span class="pw-reset-badge ${hasPw ? 'set' : 'unset'}">${hasPw ? '설정됨' : '미설정'}</span>
-      </div>
-      ${hasPw ? `<button class="pw-reset-btn" onclick="resetStudentPw('${s.id}')">초기화</button>` : ''}
-    </div>`;
-  }).join('');
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-sub)">불러오는 중...</div>';
+  try {
+    const snap = await db.ref('studentMeta').once('value');
+    const meta = snap.val() || {};
+    body.innerHTML = STUDENTS.map(s => {
+      const hasPw = !!(meta[s.id]?.uid);
+      return `<div class="pw-reset-item">
+        <div class="pw-reset-info">
+          <span class="pw-reset-num">${s.num}</span>
+          <span class="pw-reset-name">${s.name}</span>
+          <span class="pw-reset-badge ${hasPw ? 'set' : 'unset'}">${hasPw ? '설정됨' : '미설정'}</span>
+        </div>
+        ${hasPw ? `<button class="pw-reset-btn" onclick="resetStudentPw('${s.id}')">초기화</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch {
+    body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger)">로드 실패</div>';
+  }
 }
 
 async function resetStudentPw(studentId) {
   const student = STUDENTS.find(s => s.id === studentId);
   if (!confirm(`${student?.name}의 비밀번호를 초기화할까요?\n다음 입장 시 새로 설정하게 됩니다.`)) return;
   try {
-    await db.ref(`passwords/${studentId}`).remove();
+    const snap = await db.ref(`studentMeta/${studentId}/resetCount`).once('value');
+    const current = snap.val() || 0;
+    // resetCount 증가 → 학생 이메일이 변경되어 기존 계정과 분리
+    // uid null → 다음 로그인 시 신규 계정 생성으로 인식
+    await db.ref(`studentMeta/${studentId}`).update({
+      resetCount: current + 1,
+      uid: null,
+    });
     showToast(`${student?.name} 비밀번호 초기화 완료 ✔`);
+    await renderPwResetList(); // 목록 즉시 갱신
   } catch {
     showToast('초기화 실패 ❌');
   }
@@ -2184,10 +2290,30 @@ function quickEnter(studentId) {
   if (s) enterAsStudent(s);
 }
 
-function enterAsStudent(student) {
-  if (!passwordsLoaded) { showToast('잠시 후 다시 시도해주세요.'); return; }
-  const pw = passwordsCache[student.id];
-  if (!pw) {
+// 학생 Firebase Auth 이메일 생성
+// resetCount가 증가하면 이메일이 바뀌어 기존 계정과 분리됨
+function studentEmail(student) {
+  const rc = student._resetCount || 0;
+  return `s${student.id}c${rc}@c27.local`;
+}
+
+async function enterAsStudent(student) {
+  showLoading(true);
+  try {
+    const [uidSnap, rcSnap] = await Promise.all([
+      db.ref(`studentMeta/${student.id}/uid`).once('value'),
+      db.ref(`studentMeta/${student.id}/resetCount`).once('value'),
+    ]);
+    student._hasAccount  = uidSnap.val() !== null;
+    student._resetCount  = rcSnap.val() || 0;
+  } catch {
+    student._hasAccount = false;
+    student._resetCount = 0;
+  } finally {
+    showLoading(false);
+  }
+
+  if (!student._hasAccount) {
     openStudentPwModal('set', student);
   } else {
     openStudentPwModal('enter', student);
