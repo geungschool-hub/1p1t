@@ -794,6 +794,65 @@ html, body {
 .toolbar-btn.edit-mode.active { background: var(--primary); color: white; border-color: var(--primary); }
 .toolbar-btn:active { opacity: 0.8; }
 
+/* ── 명단 관리 모달 ── */
+.roster-status {
+  padding: 10px 12px; border-radius: 10px; background: var(--teacher-light);
+  color: var(--teacher); font-size: 14px; font-weight: 600; margin-bottom: 14px;
+}
+.roster-step { margin-bottom: 18px; }
+.roster-step-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.roster-help { font-size: 12.5px; color: var(--text-sub); line-height: 1.6; margin: 0 0 8px; }
+.roster-input {
+  width: 100%; box-sizing: border-box; padding: 10px;
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 16px;            /* 16px 미만이면 iOS 에서 화면이 확대된다 */
+  font-family: inherit; line-height: 1.7; resize: vertical;
+}
+.roster-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.roster-btn {
+  flex: 1; min-height: 44px; padding: 10px; border-radius: 10px; cursor: pointer;
+  font-size: 14px; font-weight: 600;
+  background: var(--teacher-light); color: var(--teacher); border: 1px solid var(--teacher-mid);
+}
+.roster-btn.primary { background: var(--teacher); color: #fff; border-color: var(--teacher); }
+.roster-btn.ghost   { background: transparent; color: var(--text-sub); border: 1px solid var(--border); }
+.roster-btn:active { opacity: 0.8; }
+.roster-btn:disabled { opacity: 0.45; cursor: default; }
+.roster-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.roster-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.roster-table th {
+  background: var(--teacher-light); color: var(--teacher);
+  padding: 7px 4px; font-size: 12px; white-space: nowrap;
+}
+.roster-table td { padding: 3px; border-bottom: 1px solid var(--border); }
+.roster-table input {
+  width: 100%; box-sizing: border-box; padding: 7px 6px;
+  border: 1px solid var(--border); border-radius: 7px;
+  font-size: 16px; font-family: inherit;   /* iOS 확대 방지 */
+}
+.roster-table td.c-num { text-align: center; font-weight: 700; color: var(--text-sub); white-space: nowrap; }
+.roster-table input.c-name { min-width: 76px; }
+.roster-table input.c-role { min-width: 120px; }
+.roster-table input.c-dept { min-width: 76px; }
+.roster-table input.c-desc { min-width: 150px; }
+.roster-bad { color: var(--danger); font-size: 12.5px; line-height: 1.7; margin-top: 6px; }
+.roster-cur-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 9px; background: var(--bg); margin-bottom: 6px;
+}
+.roster-cur-num {
+  min-width: 26px; text-align: center; font-weight: 700;
+  font-size: 13px; color: var(--text-sub);
+}
+.roster-cur-name { font-size: 14px; font-weight: 600; }
+.roster-cur-role { font-size: 12.5px; color: var(--text-sub); flex: 1; }
+.roster-cur-empty { font-size: 12.5px; color: var(--text-sub); flex: 1; }
+.roster-cur-del {
+  min-height: 32px; padding: 5px 10px; border-radius: 7px; cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  background: transparent; color: var(--danger); border: 1px solid var(--danger);
+}
+
 /* ── 변경 로그 모달 ── */
 .log-item {
   padding: 10px 12px;
@@ -1079,6 +1138,7 @@ html, body {
     <div class="teacher-toolbar">
       <button class="toolbar-btn edit-mode"   id="btn-edit-mode">✏️ 편집 모드</button>
       <button class="toolbar-btn manage-pw"  id="btn-manage-pw">🔑 비밀번호 관리</button>
+      <button class="toolbar-btn manage-roster" id="btn-manage-roster">👥 명단</button>
       <button class="toolbar-btn export-csv"  id="btn-export-csv">📄 CSV</button>
       <button class="toolbar-btn export-json" id="btn-export-json">📦 백업</button>
       <button class="toolbar-btn import-json" id="btn-import-json">📂 복원</button>
@@ -1173,6 +1233,56 @@ html, body {
       <button class="modal-close" id="pw-reset-close">✕</button>
     </div>
     <div class="modal-body" id="pw-reset-body"></div>
+  </div>
+</div>
+
+<!-- 명단 관리 모달 -->
+<div class="modal-overlay" id="roster-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">👥 명단 관리</div>
+      <button class="modal-close" id="roster-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="roster-status" id="roster-status">—</div>
+
+      <div class="roster-step">
+        <div class="roster-step-title">1. 명단 붙여넣기</div>
+        <p class="roster-help">
+          한 줄에 한 명씩, <b>번호 · 이름 · 역할 · 부서 · 안내</b> 순서입니다.
+          엑셀에서 그대로 복사해도 되고 쉼표로 나눠도 읽습니다. <b>부서·안내는 비워도 됩니다.</b><br>
+          빈 칸으로 둔 항목은 <b>기존 값을 덮지 않습니다.</b> 이름만 바꾸려면 이름만 적으시면 됩니다.
+        </p>
+        <textarea id="roster-input" class="roster-input" rows="6"
+          placeholder="1 홍길동 학급 회장&#10;2 김철수 출석부 도우미&#10;3, 이영희, 칠판 담당, 환경부"></textarea>
+        <div class="roster-btn-row">
+          <button class="roster-btn" id="roster-parse">읽어 들이기</button>
+          <button class="roster-btn ghost" id="roster-clear">입력 지우기</button>
+        </div>
+      </div>
+
+      <div class="roster-step" id="roster-preview-wrap" style="display:none">
+        <div class="roster-step-title">2. 확인하고 고치기</div>
+        <p class="roster-help" id="roster-parse-msg"></p>
+        <div class="roster-table-scroll">
+          <table class="roster-table">
+            <thead>
+              <tr><th>번호</th><th>이름</th><th>역할</th><th>부서</th><th>안내</th></tr>
+            </thead>
+            <tbody id="roster-tbody"></tbody>
+          </table>
+        </div>
+        <div class="roster-btn-row">
+          <button class="roster-btn primary" id="roster-save">저장하기</button>
+        </div>
+      </div>
+
+      <div class="roster-step">
+        <div class="roster-step-title">지금 등록된 명단</div>
+        <div id="roster-current"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2303,6 +2413,206 @@ function getDateFromWkDay(wk, dayKey) {
 //  내보내기 & 편집 모드
 // ══════════════════════════════════════
 let isEditMode = false;
+
+// ══════════════════════════════════════
+//  명단 관리 (담임 전용)
+//  실명은 소스에 두지 않는다 — 담임이 여기서 넣어 RTDB students/ 에만 산다.
+//  보안 규칙상 students/ 쓰기는 담임 계정(teacher@c27.local)만 된다.
+// ══════════════════════════════════════
+let rosterRows = [];   // 미리보기에 올라온 줄들
+
+function rEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// 번호(1·01·207○○ 무엇으로 적든) → 학번. 명단 밖이면 null
+function rosterNormId(raw) {
+  const digits = String(raw == null ? '' : raw).replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  const id = digits.length >= 5 ? digits
+           : ID_PREFIX + String(parseInt(digits, 10)).padStart(2, '0');
+  return ROSTER.some(r => r.id === id) ? id : null;
+}
+
+// 한 줄 → 칸들. 탭 > 쉼표 > 두 칸 이상 공백 순으로 나눈다.
+// 셋 다 없으면 「번호 이름 나머지전부」로 본다 — 역할 이름의 띄어쓰기를 살리려고.
+function rosterSplit(line) {
+  let cells;
+  if (line.indexOf('\t') >= 0)      cells = line.split('\t');
+  else if (line.indexOf(',') >= 0)  cells = line.split(',');
+  else if (/\s{2,}/.test(line))     cells = line.split(/\s{2,}/);
+  else {
+    const m = line.match(/^(\S+)\s+(\S+)\s*(.*)$/);
+    cells = m ? [m[1], m[2], m[3]] : [line];
+  }
+  return cells.map(c => c.trim());
+}
+
+function parseRosterText(text) {
+  const rows = [], bad = [];
+  const seen = {};
+  String(text || '').split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) return;
+    const cells = rosterSplit(line);
+    const id = rosterNormId(cells[0]);
+    if (!id) {
+      // 첫 줄이 「번호 이름 역할」 같은 머리글이면 조용히 건너뛴다
+      if (i === 0 && !/^[0-9]/.test(line)) return;
+      bad.push((i + 1) + '번째 줄 — 번호를 못 읽었습니다: ' + line.slice(0, 24));
+      return;
+    }
+    if (seen[id]) { bad.push((i + 1) + '번째 줄 — 번호가 겹칩니다: ' + cells[0]); return; }
+    seen[id] = true;
+    rows.push({
+      id: id,
+      num: id.slice(-2),
+      name: cells[1] || '',
+      role: cells[2] || '',
+      dept: cells[3] || '',
+      desc: cells.slice(4).join(' ').trim(),
+    });
+  });
+  rows.sort((x, y) => x.num.localeCompare(y.num));
+  return { rows: rows, bad: bad };
+}
+
+function renderRosterPreview() {
+  document.getElementById('roster-tbody').innerHTML = rosterRows.map((r, i) => `
+    <tr>
+      <td class="c-num">${r.num}</td>
+      <td><input class="c-name" data-i="${i}" data-k="name" value="${rEsc(r.name)}" placeholder="이름"></td>
+      <td><input class="c-role" data-i="${i}" data-k="role" value="${rEsc(r.role)}" placeholder="역할"></td>
+      <td><input class="c-dept" data-i="${i}" data-k="dept" value="${rEsc(r.dept)}" placeholder="부서"></td>
+      <td><input class="c-desc" data-i="${i}" data-k="desc" value="${rEsc(r.desc)}" placeholder="안내"></td>
+    </tr>`).join('');
+  document.getElementById('roster-preview-wrap').style.display = rosterRows.length ? '' : 'none';
+}
+
+function renderRosterCurrent() {
+  const map = {};
+  STUDENTS.forEach(s => { map[s.id] = s; });
+  document.getElementById('roster-status').innerHTML =
+    `${CLASS_SIZE}칸 중 <b>${STUDENTS.length}명</b> 등록됨`;
+  document.getElementById('roster-current').innerHTML = ROSTER.map(r => {
+    const s = map[r.id];
+    return `<div class="roster-cur-item">
+      <span class="roster-cur-num">${r.num}</span>
+      ${s
+        ? `<span class="roster-cur-name">${rEsc(s.name)}</span>
+           <span class="roster-cur-role">${rEsc(s.role)}${s.dept ? ' · ' + rEsc(s.dept) : ''}</span>
+           <button class="roster-cur-del" onclick="deleteRosterEntry('${r.id}')">지우기</button>`
+        : `<span class="roster-cur-empty">미등록</span>`}
+    </div>`;
+  }).join('');
+}
+
+async function saveRoster() {
+  const filled = rosterRows.filter(r => r.name || r.role || r.dept || r.desc);
+  if (!filled.length) { showToast('저장할 내용이 없어요'); return; }
+
+  const ok = await showConfirm({
+    title: '명단 저장',
+    msg: `${filled.length}명의 명단을 저장하시겠습니까?\n비워 둔 칸은 기존 값을 그대로 둡니다.`,
+    okLabel: '저장', cancelLabel: '취소',
+  });
+  if (!ok) return;
+
+  const updates = {};
+  filled.forEach(r => {
+    const base = 'students/' + r.id;
+    updates[base + '/num'] = r.num;                  // 번호는 늘 맞춰 둔다
+    if (r.name) updates[base + '/name'] = r.name;
+    if (r.role) updates[base + '/role'] = r.role;
+    if (r.dept) updates[base + '/dept'] = r.dept;
+    if (r.desc) updates[base + '/desc'] = r.desc;
+  });
+
+  const btn = document.getElementById('roster-save');
+  btn.disabled = true;
+  showLoading(true, '저장하는 중...');
+  try {
+    await db.ref().update(updates);                  // 멀티패스 — 전부 되거나 전부 안 된다
+    await loadAllStudents();                         // 되읽어 확인
+    const saved = filled.filter(r => STUDENTS.some(s => s.id === r.id)).length;
+    renderRosterCurrent();
+    renderTeacherView();
+    rosterRows = [];
+    document.getElementById('roster-input').value = '';
+    renderRosterPreview();
+    showToast(`명단 ${saved}명을 저장했어요 ✅`);
+  } catch (e) {
+    console.error('명단 저장 실패', e);
+    showToast('저장에 실패했어요. 담임으로 로그인했는지 확인해주세요 ❌');
+  } finally {
+    btn.disabled = false;
+    showLoading(false);
+  }
+}
+
+async function deleteRosterEntry(studentId) {
+  const s = STUDENTS.find(x => x.id === studentId);
+  const ok = await showConfirm({
+    title: '명단에서 지우기',
+    msg: `${s ? s.num + '번 ' + (s.name || '') : studentId}의 명단 정보를 지우시겠습니까?\n수행 기록은 지워지지 않습니다.`,
+    okLabel: '지우기', cancelLabel: '취소', danger: true,
+  });
+  if (!ok) return;
+  try {
+    await db.ref('students/' + studentId).remove();
+    await loadAllStudents();
+    renderRosterCurrent();
+    renderTeacherView();
+    showToast('명단에서 지웠어요');
+  } catch (e) {
+    console.error('명단 삭제 실패', e);
+    showToast('지우지 못했어요 ❌');
+  }
+}
+
+document.getElementById('btn-manage-roster').addEventListener('click', () => {
+  rosterRows = [];
+  document.getElementById('roster-input').value = '';
+  document.getElementById('roster-parse-msg').textContent = '';
+  renderRosterPreview();
+  renderRosterCurrent();
+  document.getElementById('roster-modal').classList.add('show');
+});
+
+document.getElementById('roster-close').addEventListener('click', () => {
+  document.getElementById('roster-modal').classList.remove('show');
+});
+
+document.getElementById('roster-clear').addEventListener('click', () => {
+  document.getElementById('roster-input').value = '';
+  rosterRows = [];
+  document.getElementById('roster-parse-msg').textContent = '';
+  renderRosterPreview();
+});
+
+document.getElementById('roster-parse').addEventListener('click', () => {
+  const out = parseRosterText(document.getElementById('roster-input').value);
+  rosterRows = out.rows;
+  const msg = document.getElementById('roster-parse-msg');
+  if (!out.rows.length && !out.bad.length) {
+    msg.innerHTML = '읽을 줄이 없어요. 위 칸에 명단을 붙여넣어 주세요.';
+  } else {
+    msg.innerHTML = `<b>${out.rows.length}명</b>을 읽었어요. 틀린 곳은 아래 칸에서 바로 고치면 돼요.`
+      + (out.bad.length ? `<div class="roster-bad">건너뛴 줄 ${out.bad.length}개<br>` + out.bad.map(rEsc).join('<br>') + '</div>' : '');
+  }
+  renderRosterPreview();
+});
+
+document.getElementById('roster-tbody').addEventListener('input', (e) => {
+  const el = e.target;
+  if (!el.dataset || el.dataset.i === undefined) return;
+  const row = rosterRows[Number(el.dataset.i)];
+  if (row) row[el.dataset.k] = el.value.trim();
+});
+
+document.getElementById('roster-save').addEventListener('click', saveRoster);
 
 function downloadFile(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
